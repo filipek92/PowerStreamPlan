@@ -58,8 +58,8 @@ def add_temperature_penalties_to_optimizer():
         current_temp_upper = energy_to_temp(h_soc_upper[t], h_upper_vol, h_upper_min_t)
         current_temp_lower = energy_to_temp(h_soc_lower[t], h_lower_vol, h_lower_min_t)
         
-        # Určení aktuální hodiny (z hours[t])
-        current_hour = hours[t].hour
+        # Určení aktuální hodiny (z slots[t])
+        current_hour = slots[t].hour
         is_bath_time = bath_time_start <= current_hour <= bath_time_end
         
         # Kritická teplota - vždy penalizovat

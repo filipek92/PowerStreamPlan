@@ -10,6 +10,7 @@ from models import (
     get_fve_forecast,
     get_estimate_heating_losses,
     get_temperature_forecast,
+    fve_forecast_for_slots,
 )
 
 from powerplan_environment import CREDENTIALS_FILE, OPTIONS_FILE
@@ -71,22 +72,26 @@ def prepare_data():
     states = get_ha_states()
 
     # --- předpovědi a ceny -------------------------------------------------
+    buy_raw = get_electricity_price(states, "sensor.current_buy_electricity_price_15min")
+    sell_raw = get_electricity_price(states, "sensor.current_sell_electricity_price_15min")
+
+    slots = [h for h, _ in buy_raw]
+
     fve_raw = get_fve_forecast(states, "sensor.solcast_pv_forecast_forecast_today")
     fve_raw.extend(
         get_fve_forecast(states, "sensor.solcast_pv_forecast_forecast_tomorrow")
     )
-    buy_raw = get_electricity_price(states, "sensor.current_buy_electricity_price")
-    sell_raw = get_electricity_price(states, "sensor.current_sell_electricity_price")
 
-    hours = [h for h, _ in buy_raw]
-    horizon = len(hours)
+    horizon = len(slots)
 
-    fve_pred = [v for _, v in fve_raw][:horizon]
+    fve_pred = fve_forecast_for_slots(fve_raw, slots)
     buy_price = [v for _, v in buy_raw][:horizon]
     sell_price = [v for _, v in sell_raw][:horizon]
 
-    outdoor_forecast = get_temperature_forecast(hours)
+    outdoor_forecast = get_temperature_forecast(slots)
     outdoor_temps = [temp for _, temp in outdoor_forecast]
+    print(f'Outdoor temps: {outdoor_temps}')
+    print(f"Preparing data for horizon of {horizon} slots., len(outdoor_temps)={len(outdoor_temps)}, len(fve_pred)={len(fve_pred)}")
 
     bat_soc = get_entity(states, "sensor.solax_battery_capacity", 50)
     boiler_E = get_entity(states, "sensor.tepelnaakumulace_energie_n_dr_e", 25.0)
@@ -98,12 +103,12 @@ def prepare_data():
     temp_upper = boiler_top * 0.5 + boiler_middle * 0.5
     temp_lower = boiler_middle * 0.25 + boiler_bottom * 0.75
 
-    tuv_demand = [get_tuv_demand(h) for h in hours]
+    tuv_demand = [get_tuv_demand(h) for h in slots]
     heating_demand = [get_estimate_heating_losses(t) for t in outdoor_temps]
-    lod_pred = [get_electricity_load(h) for h in hours]
+    lod_pred = [get_electricity_load(h) for h in slots]
 
     return {
-        "hours": hours,
+        "slots": slots,
         "tuv_demand": tuv_demand,
         "heating_demand": heating_demand,
         "fve_pred": fve_pred,

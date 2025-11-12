@@ -41,7 +41,7 @@ self‑explanatory:
   - ``GRID_LIMIT``     = 18     – main breaker (kW)
   - ``INVERTER_LIMIT`` = 15     – PV inverter export limit (kW)
 
-* ``dt`` – optional list of time step lengths [h], one per timestep. Default: 1.0.
+* ``dt`` – optional list of time step lengths [h], one per timestep. Default: 0.25 (15 minutes).
 
 This structure eliminates a long positional parameter list and makes it clear
 which values belong in which category – future options can be added without
@@ -89,7 +89,7 @@ def energy_to_temp(energy: float, volume: float, ref_temp: float) -> float:
 def run_mpc_optimizer(
     series: Mapping[str, Sequence[float]],
     initials: Mapping[str, float],
-    hours: Sequence[datetime],
+    slots: Sequence[datetime],
     options: Mapping[str, Any] | None = None,
     dt: Sequence[float] | None = None,
 ) -> Dict[str, Dict[str, List[float]]]:
@@ -98,9 +98,9 @@ def run_mpc_optimizer(
     debug(f"initials: {initials}")
 
     options = options or {}
-    indexes = range(len(hours))
+    indexes = range(len(slots))
     if dt is None:
-        dt = [1.0] * len(hours)
+        dt = [0.25] * len(slots)  # Default: 15 minutové kroky
 
     # Kontext pro odvozené hodnoty
     context = {}
@@ -211,7 +211,7 @@ def run_mpc_optimizer(
     # Parametry pro ocenění energie v nádrži v konkrétní hodinu
     tank_value_hour = get_option(options, "tank_value_hour")
     tank_value_bonus = get_option(options, "tank_value_bonus")  # Kč/kWh
-    tank_value_indexes = [i for i, h in enumerate(hours) if h.hour == tank_value_hour]
+    tank_value_indexes = [i for i, slot in enumerate(slots) if slot.hour == tank_value_hour]
 
     prob += (
         lpSum(
@@ -230,6 +230,19 @@ def run_mpc_optimizer(
         - upper_zone_priority * h_soc_upper[t_end]
         - tank_value_bonus * lpSum(h_soc_upper[t] for t in tank_value_indexes)
     )
+
+    print(
+        len(fve_pred),
+        len(g_buy),
+        len(b_discharge),
+        len(load_pred),
+        len(b_charge),
+        len(h_in_lower),
+        len(h_in_upper),
+        len(g_sell),
+        len(fve_unused)
+    )
+
 
     # Unified two-zone boiler constraints
     for t in indexes:
@@ -423,7 +436,7 @@ def run_mpc_optimizer(
 
     return {
         "generated_at": datetime.now().isoformat(),
-        "times": [h.isoformat() for h in hours],
+        "times": [slot.isoformat() for slot in slots],
         "inputs": series,
         "outputs": outputs,
         "results": results,

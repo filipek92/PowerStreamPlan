@@ -1,6 +1,10 @@
 base = 0.5  # kW – nepřetržitá zátěž
 
 def get_electricity_load(time):
+    """
+    Vrací očekávanou spotřebu elektřiny (kW) pro 15 minutové intervaly.
+    Hodnoty jsou pro kontinuální výkon během 15 minut.
+    """
     if time.hour < 6:
         extra = 0.0          # noc
     elif time.hour < 9:

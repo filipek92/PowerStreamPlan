@@ -52,14 +52,14 @@ def compute_and_cache():
 
     initials_keys = ["bat_soc", "temp_upper", "temp_lower"]
 
-    dt = [1.0] * len(data["hours"])  # předpokládáme hodinový krok
-    remain_slot_part = data["hours"][1].astimezone(None) - datetime.now().astimezone(None)
+    dt = [0.25] * len(data["slots"])  # předpokládáme 15 minutový krok
+    remain_slot_part = data["slots"][1].astimezone(None) - datetime.now().astimezone(None)
     dt[0] = remain_slot_part.total_seconds() / 3600.0  # zbytek aktuálního slotu v hodinách
 
     solution = run_mpc_optimizer(
         {k: data[k] for k in series_keys},
         {k: data[k] for k in initials_keys},
-        data["hours"],
+        data["slots"],
         settings,
         dt
     )
@@ -457,12 +457,12 @@ if HA_ADDON:
     scheduler = APScheduler()                        # <-- nový objekt
     scheduler.init_app(app)
 
-    # registrace úlohy – každých 5 minut v celou (00, 05, 10, ...)
+    # registrace úlohy – každé 3 minuty pro 15 minutové intervaly
     scheduler.add_job(
         id="mpc_refresh",
         func=compute_and_cache,
         trigger="cron",
-        minute="*/5",
+        minute="*/3",
     )
 
     scheduler.start()

@@ -1,4 +1,4 @@
-from .fve_forecast import get_fve_forecast
+from .fve_forecast import get_fve_forecast, fve_forecast_for_slots
 from .electricity_prices import get_electricity_price
 from .electricity_load import get_electricity_load
 from .tuv_demand import get_tuv_demand 
@@ -11,5 +11,6 @@ __all__ = [
     "get_electricity_load",
     "get_estimate_heating_losses",
     "get_tuv_demand",
-    "get_temperature_forecast"
+    "get_temperature_forecast",
+    "fve_forecast_for_slots",
 ]
